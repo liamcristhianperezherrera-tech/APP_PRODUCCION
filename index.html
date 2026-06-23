@@ -15,7 +15,7 @@
   --bg2:#eaf2fb;--ok:#22c55e;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--txt);font-family:'Barlow',sans-serif;font-size:14px;}
+body{background:#eef3f8;color:#1a2a3a;font-family:'Barlow',sans-serif;font-size:14px;}
 
 /* TOPBAR */
 .topbar{background:#ffffff;border-bottom:3px solid #0077b6;height:60px;
@@ -56,8 +56,8 @@ body{background:var(--bg);color:var(--txt);font-family:'Barlow',sans-serif;font-
 .st.green .v{color:var(--green);}.st.red .v{color:var(--red);}
 
 /* CARD */
-.card{background:var(--card);border:1px solid var(--bor);border-radius:10px;
-  padding:18px 20px;margin-bottom:14px;}
+.card{background:#ffffff;border:1px solid #d0dce8;border-radius:12px;
+  padding:18px 20px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,119,182,.08);}
 .ch{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;
   letter-spacing:3px;text-transform:uppercase;color:var(--gold);
   display:flex;align-items:center;gap:8px;
@@ -265,7 +265,6 @@ tbody td{padding:7px 8px;white-space:nowrap;}
   <div class="tab"     data-pg="avance" onclick="goTab(this)">⚡ Avance Turno</div>
   <div class="tab"     data-pg="merma"  onclick="goTab(this)">⚖ Merma</div>
   <div class="tab"     data-pg="mermas" onclick="goTab(this)">⚠️ Mermas</div>
-  <div class="tab"     data-pg="pers"   onclick="goTab(this)">👤 Personal</div>
   <div class="tab"     data-pg="config" onclick="goTab(this)">⚙️ Config</div>
 </nav>
 
@@ -760,17 +759,36 @@ tbody td{padding:7px 8px;white-space:nowrap;}
   <!-- MAQUINISTAS -->
   <div class="card">
     <div class="ch"><span class="n">O</span>Operarios / Maquinistas</div>
+    <div style="background:#eaf2fb;border:1px solid #0077b633;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#0077b6">
+      ℹ️ El personal se gestiona desde la hoja <b>BASE DE DATO</b> del Google Sheets.<br>
+      Agrega DNI y nombre ahí — el app lo carga automáticamente.
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--mut2);margin-bottom:8px">PERSONAL CARGADO:</div>
     <div id="oper-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
-    <div class="fg c2">
+
+    <div style="font-size:11px;font-weight:700;color:#0077b6;margin:12px 0 8px">➕ AGREGAR TEMPORAL (si el operario no está en el sistema)</div>
+    <div class="fg c3" style="margin-bottom:10px">
       <div class="fl">
-        <label>Agregar operario</label>
-        <input type="text" id="new-oper" placeholder="Nombre completo"
-          onkeydown="if(event.key==='Enter')addOper()">
+        <label>DNI</label>
+        <input type="text" id="new-oper-dni" placeholder="Ej: 43032252" maxlength="8"
+          style="width:100%" oninput="verificarDNIConfig(this.value)">
+      </div>
+      <div class="fl">
+        <label>Nombre completo</label>
+        <input type="text" id="new-oper-nombre" placeholder="Nombre y apellido" style="width:100%">
       </div>
       <div style="display:flex;align-items:flex-end">
-        <button class="btn btn-go btn-sm" onclick="addOper()">+ Agregar</button>
+        <button class="btn" onclick="addOperTemporal()" style="background:#22c55e;white-space:nowrap">
+          + Agregar temporal
+        </button>
       </div>
     </div>
+    <div id="oper-dni-msg" style="font-size:11px;margin-bottom:10px"></div>
+
+    <button class="btn" onclick="cargarBaseDatos();toast('Actualizando desde Sheets...','ok')" 
+      style="background:#0077b6;font-size:11px;padding:7px 14px">
+      🔄 Actualizar desde Google Sheets
+    </button>
   </div>
 </div>
 
@@ -1181,11 +1199,12 @@ function recalc(){
   const pend=Math.max(0,rol-prod-ant);
   // Auto-calcular cajas SOLO si hay cajxund en el BOM (si no, queda manual)
   const cajField=document.getElementById('f-cajas-prod');
-  const cxu = window._cajxund || (sesion?sesion.cajxund:0) || 0;
+  // cajxund: SOLO del BOM en vivo, sin fallback residual
+  const cxu = window._cajxund || 0;
   if(cajField && prod>0 && cxu>0){
     cajField.value = Math.round(prod*cxu);
-  } else if(cajField && prod===0){
-    cajField.value = '';
+  } else if(cajField && prod>=0 && cxu===0){
+    cajField.value = ''; // sin BOM = vacío, operario llena manual
   }
   document.getElementById('k-rol').textContent=prod;
   document.getElementById('k-kg').textContent =kg;
@@ -1515,6 +1534,7 @@ function reset(){
   document.getElementById('k-est').style.color='var(--mut)';
   document.getElementById('k-estbox').style.borderColor='';
   window._kgrActual = 0;
+  window._cajxund = 0;
   window._rolActual = 0;
   window._cajxund   = 0.25;
 }
@@ -1854,14 +1874,22 @@ function renderConfig(){
       <button onclick="delAsist('${a}')" style="background:none;border:none;color:var(--mut);cursor:pointer">✕</button>
     </div>`).join('');
 
-  // Chips operarios
+  // Chips operarios — combinar Sheet + temporales locales
   const oc = document.getElementById('oper-chips');
-  if(oc) oc.innerHTML = operarios.map(o=>`
-    <div style="background:var(--sur);border:1px solid var(--bor);border-radius:20px;
-      padding:5px 12px;font-size:13px;color:var(--txt);display:inline-flex;align-items:center;gap:6px">
-      🔩 ${o}
-      <button onclick="delOper('${o}')" style="background:none;border:none;color:var(--mut);cursor:pointer">✕</button>
-    </div>`).join('');
+  if(oc){
+    const personalDB = window._personalDB || JSON.parse(localStorage.getItem('reb5_personal')||'[]');
+    if(personalDB.length){
+      oc.innerHTML = personalDB.map(p=>`
+        <div style="background:${p.temporal?'#fff8e1':'#eaf2fb'};border:1px solid ${p.temporal?'#f59e0b55':'#0077b633'};
+          border-radius:20px;padding:5px 12px;font-size:12px;color:${p.temporal?'#b45309':'#0077b6'};
+          display:inline-flex;align-items:center;gap:6px">
+          ${p.temporal?'⏱':'👤'} ${p.nombre} <span style="opacity:.6;font-size:10px">${p.dni}</span>
+          ${p.temporal?`<button onclick="delOperTemporal('${p.dni}')" style="background:none;border:none;color:#f59e0b;cursor:pointer;font-size:12px">✕</button>`:''}
+        </div>`).join('');
+    } else {
+      oc.innerHTML = '<span style="color:var(--mut);font-size:12px">Sin personal cargado — presiona Actualizar desde Google Sheets</span>';
+    }
+  }
 
   // Actualizar selectores
   renderMaqSelect();
@@ -1922,6 +1950,53 @@ function addAsistCfg(){
   localStorage.setItem('reb5_asist',JSON.stringify(asistentes));
   inp.value=''; renderConfig(); renderAsistentes();
   toast('✔ Asistente agregado','ok');
+}
+
+function verificarDNIConfig(dni){
+  const msg = document.getElementById('oper-dni-msg');
+  if(dni.length < 6){ msg.textContent=''; return; }
+  const personal = window._personalDB || JSON.parse(localStorage.getItem('reb5_personal')||'[]');
+  const found = personal.find(p=>p.dni===dni.trim());
+  if(found){
+    document.getElementById('new-oper-nombre').value = found.nombre;
+    msg.style.color='#22c55e';
+    msg.textContent='✔ Ya existe en el sistema: '+found.nombre;
+  } else {
+    msg.style.color='#f59e0b';
+    msg.textContent='⚠ DNI no encontrado — puedes agregar temporalmente';
+  }
+}
+
+function addOperTemporal(){
+  const dni    = document.getElementById('new-oper-dni').value.trim();
+  const nombre = document.getElementById('new-oper-nombre').value.trim().toUpperCase();
+  if(!dni || !nombre){ toast('Ingresa DNI y nombre','warn'); return; }
+
+  // Agregar a la lista local _personalDB
+  if(!window._personalDB) window._personalDB = [];
+  const yaExiste = window._personalDB.find(p=>p.dni===dni);
+  if(yaExiste){
+    toast('Este DNI ya existe: '+yaExiste.nombre,'warn');
+    return;
+  }
+  window._personalDB.push({dni, nombre, temporal:true});
+  localStorage.setItem('reb5_personal', JSON.stringify(window._personalDB));
+
+  // Limpiar campos
+  document.getElementById('new-oper-dni').value='';
+  document.getElementById('new-oper-nombre').value='';
+  document.getElementById('oper-dni-msg').textContent='';
+
+  renderOperSelect();
+  toast('✔ '+nombre+' agregado temporalmente','ok');
+}
+
+function delOperTemporal(dni){
+  window._personalDB = (window._personalDB||[]).filter(p=>p.dni!==dni);
+  localStorage.setItem('reb5_personal', JSON.stringify(window._personalDB));
+  renderConfig();
+  renderOperSelect();
+  toast('Operario eliminado temporalmente','ok');
 }
 
 function addOper(){
