@@ -759,31 +759,8 @@ tbody td{padding:7px 8px;white-space:nowrap;}
   <!-- MAQUINISTAS -->
   <div class="card">
     <div class="ch"><span class="n">O</span>Operarios / Maquinistas</div>
-    <div style="background:#eaf2fb;border:1px solid #0077b633;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#0077b6">
-      ℹ️ El personal se gestiona desde la hoja <b>BASE DE DATO</b> del Google Sheets.<br>
-      Agrega DNI y nombre ahí — el app lo carga automáticamente.
-    </div>
-    <div style="font-size:11px;font-weight:700;color:var(--mut2);margin-bottom:8px">PERSONAL CARGADO:</div>
-    <div id="oper-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
 
-    <div style="font-size:11px;font-weight:700;color:#0077b6;margin:12px 0 8px">➕ AGREGAR TEMPORAL (si el operario no está en el sistema)</div>
-    <div class="fg c3" style="margin-bottom:10px">
-      <div class="fl">
-        <label>DNI</label>
-        <input type="text" id="new-oper-dni" placeholder="Ej: 43032252" maxlength="8"
-          style="width:100%" oninput="verificarDNIConfig(this.value)">
-      </div>
-      <div class="fl">
-        <label>Nombre completo</label>
-        <input type="text" id="new-oper-nombre" placeholder="Nombre y apellido" style="width:100%">
-      </div>
-      <div style="display:flex;align-items:flex-end">
-        <button class="btn" onclick="addOperTemporal()" style="background:#22c55e;white-space:nowrap">
-          + Agregar temporal
-        </button>
-      </div>
-    </div>
-    <div id="oper-dni-msg" style="font-size:11px;margin-bottom:10px"></div>
+    <div id="oper-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
 
     <button class="btn" onclick="cargarBaseDatos();toast('Actualizando desde Sheets...','ok')" 
       style="background:#0077b6;font-size:11px;padding:7px 14px">
@@ -1197,14 +1174,28 @@ function recalc(){
   const kg  =(prod*kgr).toFixed(2);
   const pct =rol>0?Math.round(((prod+ant)/rol)*100):0;
   const pend=Math.max(0,rol-prod-ant);
+  // Alerta si supera el pedido
+  const cajField2 = document.getElementById('f-cajas-prod');
+  const estadoEl = document.getElementById('k-est');
+  if(estadoEl && rol>0 && (prod+ant) > rol){
+    estadoEl.textContent = '⚠ EXCEDE PEDIDO';
+    estadoEl.style.color = '#ef4444';
+    estadoEl.style.fontWeight = '900';
+  }
   // Auto-calcular cajas SOLO si hay cajxund en el BOM (si no, queda manual)
   const cajField=document.getElementById('f-cajas-prod');
   // cajxund: SOLO del BOM en vivo, sin fallback residual
   const cxu = window._cajxund || 0;
   if(cajField && prod>0 && cxu>0){
-    cajField.value = Math.round(prod*cxu);
+    const cajExacto = prod * cxu;
+    cajField.value = Math.floor(cajExacto); // floor: cajas completas únicamente
+    // Si no es múltiplo exacto, marcar en naranja
+    cajField.style.borderColor = (cajExacto % 1 !== 0) ? '#f59e0b' : '';
+    cajField.title = (cajExacto % 1 !== 0) ? 
+      'Atención: '+prod+' rollos no es múltiplo exacto de caja ('+Math.round(1/cxu)+' rollos/caja)' : '';
   } else if(cajField && prod>=0 && cxu===0){
     cajField.value = ''; // sin BOM = vacío, operario llena manual
+    cajField.style.borderColor = '';
   }
   document.getElementById('k-rol').textContent=prod;
   document.getElementById('k-kg').textContent =kg;
@@ -1693,24 +1684,23 @@ function renderSeccionesEspejo(secciones){
 }
 
 function calcMermaTeórica(){
-  // Suma la merma teórica de los registros del turno seleccionado
   const fecha = document.getElementById('mk-fecha').value;
   const turno = document.getElementById('mk-turno').value;
-  const area  = document.getElementById('mk-area').value;
-
   if(!fecha){ toast('Selecciona una fecha','warn'); return; }
+  toast('⏳ Cargando historial...','ok');
 
-  // Convertir fecha input (YYYY-MM-DD) a ddmmyyyy para comparar con registros
-  const [y,m,d] = fecha.split('-');
-  const fechaFmt = d+'/'+m+'/'+y;
+  // Siempre cargar historial fresco del Sheet
+  cargarHistorialRebobinado(function(hist){
+    const [y,m,d] = fecha.split('-');
+    const fechaFmt = d+'/'+m+'/'+y;
 
-  // Buscar en historial o en registros locales
-  const fuente = window._historialRebobinado || registros;
-  const filtrados = fuente.filter(r=>{
-    const mismaFecha = (r.fecha||'') === fechaFmt;
-    const mismoTurno = (r.turno||'').toUpperCase() === turno;
-    return mismaFecha && mismoTurno;
-  });
+    const filtrados = hist.filter(r=>{
+      const mismaFecha = (r.fecha||'').trim() === fechaFmt;
+      const mismoTurno = (r.turno||'').toUpperCase().trim() === turno.toUpperCase().trim();
+      return mismaFecha && mismoTurno;
+    });
+
+    console.log('Filtrados merma:', filtrados.length, 'fecha:', fechaFmt, 'turno:', turno);
 
   const sumaMerma = filtrados.reduce((s,r)=>{
     return s + (Number(r.mTucoCol)||0) + (Number(r.mPesoBajo)||0) + (Number(r.mPesoAlto)||0) +
@@ -1718,10 +1708,15 @@ function calcMermaTeórica(){
            (Number(r.mRolAire)||0) + (Number(r.mRolArr)||0) + (Number(r.mTucoArq)||0);
   }, 0);
 
-  document.getElementById('mk-teorica').value = sumaMerma.toFixed(2);
-  document.getElementById('mkg-teorica').textContent = sumaMerma.toFixed(2);
-  calcMerma();
-  toast('Merma teórica calculada: '+sumaMerma.toFixed(2)+' KG','ok');
+    document.getElementById('mk-teorica').value = sumaMerma.toFixed(2);
+    document.getElementById('mkg-teorica').textContent = sumaMerma.toFixed(2);
+    calcMerma();
+    if(filtrados.length === 0){
+      toast('⚠ No hay registros para esa fecha/turno en el Sheet','warn');
+    } else {
+      toast('✔ Merma teórica: '+sumaMerma.toFixed(2)+' KG ('+filtrados.length+' registros)','ok');
+    }
+  }); // fin cargarHistorialRebobinado
 }
 
 function calcMerma(){
