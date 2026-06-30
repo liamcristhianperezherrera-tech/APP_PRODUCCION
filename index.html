@@ -571,6 +571,14 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
           <option value="">— Sin parada —</option>
           <option value="MANTENIMIENTO CORRECTIVO">MANTENIMIENTO CORRECTIVO</option>
           <option value="MANTENIMIENTO PREVENTIVO">MANTENIMIENTO PREVENTIVO</option>
+          <option value="FALTA DE MATERIAL">FALTA DE MATERIAL</option>
+          <option value="FALLA MECÁNICA">FALLA MECÁNICA</option>
+          <option value="CAMBIO DE BOBINA">CAMBIO DE BOBINA</option>
+          <option value="FALLA ELÉCTRICA">FALLA ELÉCTRICA</option>
+          <option value="CAMBIO DE FORMATO">CAMBIO DE FORMATO</option>
+          <option value="LIMPIEZA">LIMPIEZA</option>
+          <option value="SIN OPERARIO">SIN OPERARIO</option>
+          <option value="OTRO">OTRO</option>
         </select>
       </div>
       <div class="fl"><label>Observación</label>
@@ -807,6 +815,14 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
           <option value="">— Seleccionar motivo —</option>
           <option value="MANTENIMIENTO CORRECTIVO">MANTENIMIENTO CORRECTIVO</option>
           <option value="MANTENIMIENTO PREVENTIVO">MANTENIMIENTO PREVENTIVO</option>
+          <option value="FALTA DE MATERIAL">FALTA DE MATERIAL</option>
+          <option value="FALLA MECÁNICA">FALLA MECÁNICA</option>
+          <option value="CAMBIO DE BOBINA">CAMBIO DE BOBINA</option>
+          <option value="FALLA ELÉCTRICA">FALLA ELÉCTRICA</option>
+          <option value="CAMBIO DE FORMATO">CAMBIO DE FORMATO</option>
+          <option value="LIMPIEZA">LIMPIEZA</option>
+          <option value="SIN OPERARIO">SIN OPERARIO</option>
+          <option value="OTRO">OTRO</option>
         </select>
       </div>
       <div class="fl">
@@ -962,7 +978,7 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
    CONFIGURACIÓN — URLs Google Sheets
 ══════════════════════════════════════════ */
 const GS_MPS    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpDLt6JzXRk2YHhG2hZbMTr-l0_uNujIZK8h5sSO7mHyRU6VAn0C3wMJV1TC3mSemg61TJ4g3f4-ta/pub?gid=449365246&single=true&output=csv';
-const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbypZILEbon7pUCQKMXHXrcEZMG9FkMEttEsZzfn4tKxLH1tDjwtPhtDUNTxshtzQDU6/exec';
+const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbx_wmiKS2b2ZdCH83L-fXTIv6k5VNsWRSnchmbR2iP8otEEZMK6QZE9mrget8X8nX7G/exec';
 
 /* ══════════════════════════════════════════
    OPs LOCAL (del MPS Excel)
@@ -2120,7 +2136,35 @@ function _mermaGSCallback(data){
   if(data && data.filas && data.filas.length){
     window._mermaGSData = data.filas;
     renderGraficoMerma();
+    renderMermaHistGS(data.filas);
   }
+}
+
+function renderMermaHistGS(filas){
+  const tbody = document.getElementById('mk-body');
+  const empty = document.getElementById('mk-empty');
+  if(!tbody) return;
+  if(!filas || !filas.length){ 
+    empty.style.display='block'; 
+    return; 
+  }
+  empty.style.display='none';
+  tbody.innerHTML = filas.map(r=>{
+    const diff = (Number(r.real) - Number(r.teorica)).toFixed(2);
+    const pct  = r.teorica ? ((Number(r.real)-Number(r.teorica))/Number(r.teorica)*100).toFixed(1)+'%' : '—';
+    const color = Number(diff)>0 ? 'var(--red)' : 'var(--green)';
+    return `<tr>
+      <td>${r.fecha||'—'}</td>
+      <td><span class="bdg ${r.turno==='DIA'?'b-dia':'b-noche'}">${r.turno||'—'}</span></td>
+      <td>${r.area||'REBOBINADO'}</td>
+      <td class="td-s">${r.encargado||'—'}</td>
+      <td class="td-n">${Number(r.teorica).toFixed(2)}</td>
+      <td class="td-n">${Number(r.real).toFixed(2)}</td>
+      <td class="td-n" style="color:${color}">${diff}</td>
+      <td class="td-n">${pct}</td>
+      <td><span class="bdg ${Number(diff)<=0?'b-ok':'b-pend'}">${Number(diff)<=0?'OK':'REVISAR'}</span></td>
+    </tr>`;
+  }).join('');
 }
 
 function renderGraficoMerma(){
