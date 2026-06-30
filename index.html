@@ -1598,11 +1598,12 @@ function parar(){
     const [hhi,mmi]=parHi.split(':').map(Number);
     const [hhf,mmf]=parHf.split(':').map(Number);
     let mins=(hhf*60+mmf)-(hhi*60+mmi); if(mins<0)mins+=1440;
+    const parObj={fecha:ddmmyyyy(),turno:sesion?sesion.turno:'',maq:sesion?sesion.maq:'',
+      hinicio:parHi,hfin:parHf,minutos:mins,motivo:parMot,obs,ts:Date.now()};
     const phist=JSON.parse(localStorage.getItem('reb5_paradas')||'[]');
-    phist.unshift({fecha:new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'}),
-      turno:sesion?sesion.turno:'',maq:sesion?sesion.maq:'',
-      hinicio:parHi,hfin:parHf,minutos:mins,motivo:parMot,obs,ts:Date.now()});
+    phist.unshift(parObj);
     localStorage.setItem('reb5_paradas',JSON.stringify(phist));
+    enviarParadaGS(parObj);
     renderParadas();
   }
   const horas =diffHoras(sesion.hinicio,hfin);
