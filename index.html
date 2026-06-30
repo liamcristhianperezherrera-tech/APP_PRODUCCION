@@ -569,15 +569,8 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
       <div class="fl"><label>Motivo parada</label>
         <select id="par-mot-reg">
           <option value="">— Sin parada —</option>
-          <option>Falta de material</option>
-          <option>Falla mecánica</option>
-          <option>Cambio de bobina</option>
-          <option>Mantenimiento</option>
-          <option>Falla eléctrica</option>
-          <option>Cambio de formato</option>
-          <option>Limpieza</option>
-          <option>Sin operario</option>
-          <option>Otro</option>
+          <option value="MANTENIMIENTO CORRECTIVO">MANTENIMIENTO CORRECTIVO</option>
+          <option value="MANTENIMIENTO PREVENTIVO">MANTENIMIENTO PREVENTIVO</option>
         </select>
       </div>
       <div class="fl"><label>Observación</label>
@@ -812,15 +805,8 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
         <label>Motivo</label>
         <select id="par-motivo" style="width:100%">
           <option value="">— Seleccionar motivo —</option>
-          <option>Falta de material</option>
-          <option>Falla mecánica</option>
-          <option>Cambio de bobina</option>
-          <option>Mantenimiento</option>
-          <option>Falla eléctrica</option>
-          <option>Cambio de formato</option>
-          <option>Limpieza</option>
-          <option>Sin operario</option>
-          <option>Otro</option>
+          <option value="MANTENIMIENTO CORRECTIVO">MANTENIMIENTO CORRECTIVO</option>
+          <option value="MANTENIMIENTO PREVENTIVO">MANTENIMIENTO PREVENTIVO</option>
         </select>
       </div>
       <div class="fl">
@@ -976,7 +962,7 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
    CONFIGURACIÓN — URLs Google Sheets
 ══════════════════════════════════════════ */
 const GS_MPS    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpDLt6JzXRk2YHhG2hZbMTr-l0_uNujIZK8h5sSO7mHyRU6VAn0C3wMJV1TC3mSemg61TJ4g3f4-ta/pub?gid=449365246&single=true&output=csv';
-const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbxzf73ZDmd-RDJBS7oZan0N5vZuHbUwxSh40AGIJ0pVr-f8BZXHcU5oViHTcGV2vRV6/exec';
+const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbypZILEbon7pUCQKMXHXrcEZMG9FkMEttEsZzfn4tKxLH1tDjwtPhtDUNTxshtzQDU6/exec';
 
 /* ══════════════════════════════════════════
    OPs LOCAL (del MPS Excel)
@@ -1040,7 +1026,7 @@ function goTab(el){
   if(el.dataset.pg==='hist')    renderHist();
   if(el.dataset.pg==='avance')  renderAvance();
   if(el.dataset.pg==='mermas')  renderMermas();
-  if(el.dataset.pg==='merma'){  renderMermaHist(); renderGraficoMerma(); renderMermaEncargados(); }
+  if(el.dataset.pg==='merma'){  renderMermaHist(); cargarComparacionMerma(); renderMermaEncargados(); }
   if(el.dataset.pg==='paradas'){ renderParadas(); renderMaqParadas(); }
   if(el.dataset.pg==='pers')    renderPers();
   if(el.dataset.pg==='config')  renderConfig();
@@ -2123,16 +2109,41 @@ function renderMaqParadas(){
     maqList.map(m=>`<option value="${m}">Máquina ${m}</option>`).join('');
 }
 
+function cargarComparacionMerma(){
+  // Jala datos de la hoja "Comparación de Merma" del Sheet via JSONP
+  const s = document.createElement('script');
+  s.src = GS_SCRIPT + '?action=getComparacionMerma&callback=_mermaGSCallback';
+  document.head.appendChild(s);
+}
+
+function _mermaGSCallback(data){
+  if(data && data.filas && data.filas.length){
+    window._mermaGSData = data.filas;
+    renderGraficoMerma();
+  }
+}
+
 function renderGraficoMerma(){
   const canvas = document.getElementById('merma-chart');
   if(!canvas) return;
-  const hist = JSON.parse(localStorage.getItem('reb5_merma_hist')||'[]');
-  if(!hist.length){ canvas.style.display='none'; return; }
-  canvas.style.display='block';
 
-  const labels = hist.slice(0,10).reverse().map(h=>h.fecha+' '+h.turno.substring(0,1));
-  const teorica = hist.slice(0,10).reverse().map(h=>Number(h.teorica)||0);
-  const real = hist.slice(0,10).reverse().map(h=>Number(h.real)||0);
+  // Priorizar datos del Sheet, si no hay usar localStorage
+  let filas = window._mermaGSData || null;
+  let labels, teorica, real;
+
+  if(filas && filas.length){
+    // Datos del Sheet: {encargado, teorica, real}
+    labels  = filas.map(f=>f.encargado);
+    teorica = filas.map(f=>Number(f.teorica)||0);
+    real    = filas.map(f=>Number(f.real)||0);
+  } else {
+    const hist = JSON.parse(localStorage.getItem('reb5_merma_hist')||'[]');
+    if(!hist.length){ canvas.style.display='none'; return; }
+    labels  = hist.slice(0,10).reverse().map(h=>h.fecha+' '+h.turno.substring(0,1));
+    teorica = hist.slice(0,10).reverse().map(h=>Number(h.teorica)||0);
+    real    = hist.slice(0,10).reverse().map(h=>Number(h.real)||0);
+  }
+  canvas.style.display='block';
 
   if(window._mermaChart) window._mermaChart.destroy();
 
