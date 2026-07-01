@@ -978,7 +978,7 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
    CONFIGURACIÓN — URLs Google Sheets
 ══════════════════════════════════════════ */
 const GS_MPS    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpDLt6JzXRk2YHhG2hZbMTr-l0_uNujIZK8h5sSO7mHyRU6VAn0C3wMJV1TC3mSemg61TJ4g3f4-ta/pub?gid=449365246&single=true&output=csv';
-const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbx_wmiKS2b2ZdCH83L-fXTIv6k5VNsWRSnchmbR2iP8otEEZMK6QZE9mrget8X8nX7G/exec';
+const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbz6boA5NTsn1yXbjltvqycrjWBj_bm5yA2XkgaNOvrFijAD3pve1d0pOzJcT627lzXh/exec';
 
 /* ══════════════════════════════════════════
    OPs LOCAL (del MPS Excel)
@@ -2067,21 +2067,21 @@ function guardarParada(){
 }
 
 function enviarParadaGS(par){
-  const totalHr = par.minutos ? (par.minutos/60).toFixed(2) : '';
+  const totalHr = par.minutos ? (par.minutos/60).toFixed(2) : '0';
   const fd = new FormData();
   fd.append('tipo',       'PARADA');
   fd.append('fecha',      par.fecha     || '');
-  fd.append('maquina',    'REBOBINADORA # '+par.maq);
-  fd.append('motivo',     par.motivo    || '');
+  fd.append('maquina',    par.maq       || '');
+  fd.append('motivo',     'MANTENIMIENTO CORRECTIVO');
   fd.append('tip',        'P. MECANICA');
   fd.append('hrInicio',   par.hinicio   || '');
   fd.append('hrFin',      par.hfin      || '');
   fd.append('totalHr',    totalHr);
-  fd.append('total',      String(par.minutos || ''));
+  fd.append('total',      String(par.minutos || '0'));
   fd.append('observacion',par.obs       || '');
   fetch(GS_SCRIPT,{method:'POST',mode:'no-cors',body:fd})
     .then(()=>toast('☁ Parada enviada al Sheet','ok'))
-    .catch(()=>toast('⚠ Parada guardada local — sin conexión','warn'));
+    .catch(()=>toast('⚠ Sin conexión — parada guardada local','warn'));
 }
 
 function renderParadas(){
@@ -2149,17 +2149,17 @@ function cargarComparacionMerma(){
 
 function _mermaGSCallback(data){
   const empty = document.getElementById('mk-empty');
+  console.log('Merma GS response:', JSON.stringify(data).substring(0,200));
   if(data && data.filas && data.filas.length){
     window._mermaGSData = data.filas;
+    if(empty) empty.style.display='none';
     renderGraficoMerma();
     renderMermaHistGS(data.filas);
   } else {
-    // Sin datos del Sheet — mostrar localStorage
-    if(empty) empty.textContent = 'Sin registros de merma aún.';
-    if(empty) empty.style.display='block';
+    const msg = data && data.error ? '⚠ Error Sheet: '+data.error : 'Sin registros en Sheet aún.';
+    if(empty){ empty.textContent=msg; empty.style.display='block'; }
     renderMermaHist();
     renderGraficoMerma();
-    if(data && data.error) console.warn('Merma GS error:',data.error);
   }
 }
 
