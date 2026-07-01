@@ -2069,18 +2069,18 @@ function guardarParada(){
 function enviarParadaGS(par){
   const totalHr = par.minutos ? (par.minutos/60).toFixed(2) : '0';
   const maqNombre = par.maq ? (String(par.maq).toUpperCase().includes('REBOBINADORA') ? par.maq : 'REBOBINADORA # '+par.maq) : '';
-  const params = new URLSearchParams();
-  params.append('tipo',       'PARADA');
-  params.append('fecha',      par.fecha     || '');
-  params.append('maquina',    maqNombre);
-  params.append('motivo',     par.motivo || 'MANTENIMIENTO CORRECTIVO');
-  params.append('tip',        'P. MECANICA');
-  params.append('hrInicio',   par.hinicio   || '');
-  params.append('hrFin',      par.hfin      || '');
-  params.append('totalHr',    totalHr);
-  params.append('total',      String(par.minutos || '0'));
-  params.append('observacion',par.obs       || '');
-  fetch(GS_SCRIPT, {method:'POST', mode:'no-cors', body:params.toString()})
+  const fd = new FormData();
+  fd.append('tipo',       'PARADA');
+  fd.append('fecha',      par.fecha     || '');
+  fd.append('maquina',    maqNombre);
+  fd.append('motivo',     par.motivo || 'MANTENIMIENTO CORRECTIVO');
+  fd.append('tip',        'P. MECANICA');
+  fd.append('hrInicio',   par.hinicio   || '');
+  fd.append('hrFin',      par.hfin      || '');
+  fd.append('totalHr',    totalHr);
+  fd.append('total',      String(par.minutos || '0'));
+  fd.append('observacion',par.obs       || '');
+  fetch(GS_SCRIPT,{method:'POST',mode:'no-cors',body:fd})
     .then(()=>toast('☁ Parada enviada al Sheet','ok'))
     .catch(()=>toast('⚠ Sin conexión — parada guardada local','warn'));
 }
