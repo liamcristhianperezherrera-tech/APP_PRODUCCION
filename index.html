@@ -2071,8 +2071,8 @@ function enviarParadaGS(par){
   const fd = new FormData();
   fd.append('tipo',       'PARADA');
   fd.append('fecha',      par.fecha     || '');
-  fd.append('maquina',    par.maq       || '');
-  fd.append('motivo',     'MANTENIMIENTO CORRECTIVO');
+  fd.append('maquina',    par.maq ? (String(par.maq).toUpperCase().includes('REBOBINADORA') ? par.maq : 'REBOBINADORA # '+par.maq) : '');
+  fd.append('motivo',     par.motivo || 'MANTENIMIENTO CORRECTIVO');
   fd.append('tip',        'P. MECANICA');
   fd.append('hrInicio',   par.hinicio   || '');
   fd.append('hrFin',      par.hfin      || '');
