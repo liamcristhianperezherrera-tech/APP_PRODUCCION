@@ -561,7 +561,7 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
 
     <!-- PARADA -->
     <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--warn);margin:14px 0 8px">🛑 Parada del turno</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
       <div class="fl"><label>H. Inicio parada</label>
         <input type="time" id="par-hi-reg"></div>
       <div class="fl"><label>H. Fin parada</label>
@@ -581,9 +581,9 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
           <option value="OTRO">OTRO</option>
         </select>
       </div>
-      <div class="fl"><label>Observación</label>
-        <textarea id="f-obs" placeholder="Detalle adicional..." rows="2"></textarea>
-      </div>
+    </div>
+    <div class="fl" style="margin-bottom:10px"><label>Observación parada</label>
+      <input type="text" id="par-obs-reg" placeholder="Detalle adicional...">
     </div>
 
     <button class="btn btn-stop" onclick="parar()">⏹ REGISTRAR Y GUARDAR</button>
@@ -1591,7 +1591,8 @@ function parar(){
   const ccCaja   =document.getElementById('cc-caja').checked?'✓':'';
   const ccPeso   =document.getElementById('cc-peso').checked?'✓':'';
   const ccCentro =document.getElementById('cc-centro').checked?'✓':'';
-  const obs   =document.getElementById('f-obs').value.trim();
+  const obs   =document.getElementById('f-obs') ? (document.getElementById('f-obs').value||'').trim() : '';
+  const obsParada = (document.getElementById('par-obs-reg')||{}).value||'';
   // Guardar parada integrada si fue llenada
   const parHi  = (document.getElementById('par-hi-reg')||{}).value||'';
   const parHf  = (document.getElementById('par-hf-reg')||{}).value||'';
@@ -1601,7 +1602,7 @@ function parar(){
     const [hhf,mmf]=parHf.split(':').map(Number);
     let mins=(hhf*60+mmf)-(hhi*60+mmi); if(mins<0)mins+=1440;
     const parObj={fecha:ddmmyyyy(),turno:sesion?sesion.turno:'',maq:sesion?sesion.maq:'',
-      hinicio:parHi,hfin:parHf,minutos:mins,motivo:parMot,obs,ts:Date.now()};
+      hinicio:parHi,hfin:parHf,minutos:mins,motivo:parMot,obs:obsParada,ts:Date.now()};
     const phist=JSON.parse(localStorage.getItem('reb5_paradas')||'[]');
     phist.unshift(parObj);
     localStorage.setItem('reb5_paradas',JSON.stringify(phist));
@@ -1769,6 +1770,7 @@ function reset(){
   document.getElementById('par-hi-reg') && (document.getElementById('par-hi-reg').value='');
   document.getElementById('par-hf-reg') && (document.getElementById('par-hf-reg').value='');
   document.getElementById('par-mot-reg') && (document.getElementById('par-mot-reg').value='');
+  document.getElementById('par-obs-reg') && (document.getElementById('par-obs-reg').value='');
   ['f-op','f-hinicio','f-fecha','f-hfin','f-prod','f-ant','f-obs','f-mkg','f-mkg-color','f-bobina','f-peso-tuco','f-velocidad','f-tinsrv','f-treutil','f-cajas-prod','m-tuco-col','m-peso-bajo','m-peso-alto','m-var-esp','m-saldo-bob','m-rol-hueco','m-rol-aire','m-rol-arr','m-tuco-arq','f-lote-prod'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
@@ -2126,17 +2128,38 @@ function renderMaqParadas(){
 }
 
 function cargarComparacionMerma(){
-  // Jala datos de la hoja "Comparación de Merma" del Sheet via JSONP
+  // Mostrar cargando
+  const tbody = document.getElementById('mk-body');
+  const empty = document.getElementById('mk-empty');
+  if(empty) empty.textContent = '⏳ Cargando datos del Sheet...';
+  if(empty) empty.style.display='block';
+
+  // Remover script anterior si existe
+  const prev = document.getElementById('_mermaScript');
+  if(prev) prev.remove();
+
   const s = document.createElement('script');
-  s.src = GS_SCRIPT + '?action=getComparacionMerma&callback=_mermaGSCallback';
+  s.id = '_mermaScript';
+  s.src = GS_SCRIPT + '?action=getComparacionMerma&callback=_mermaGSCallback&t='+Date.now();
+  s.onerror = ()=>{
+    if(empty) empty.textContent = '⚠ No se pudo conectar al Sheet. Revisa tu conexión.';
+  };
   document.head.appendChild(s);
 }
 
 function _mermaGSCallback(data){
+  const empty = document.getElementById('mk-empty');
   if(data && data.filas && data.filas.length){
     window._mermaGSData = data.filas;
     renderGraficoMerma();
     renderMermaHistGS(data.filas);
+  } else {
+    // Sin datos del Sheet — mostrar localStorage
+    if(empty) empty.textContent = 'Sin registros de merma aún.';
+    if(empty) empty.style.display='block';
+    renderMermaHist();
+    renderGraficoMerma();
+    if(data && data.error) console.warn('Merma GS error:',data.error);
   }
 }
 
