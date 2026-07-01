@@ -983,7 +983,7 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
    CONFIGURACIÓN — URLs Google Sheets
 ══════════════════════════════════════════ */
 const GS_MPS    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpDLt6JzXRk2YHhG2hZbMTr-l0_uNujIZK8h5sSO7mHyRU6VAn0C3wMJV1TC3mSemg61TJ4g3f4-ta/pub?gid=449365246&single=true&output=csv';
-const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbyWeO0Nn-89Ap3CsINF3seX_Mt6ybvPSrrtOMPr6lDgpaIsYuB9jMr2KI8Lak8seeQY/exec';
+const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbwbmzqpejsO1j22LwjIWTR8YbHXUeTBaCwX2iL6eLAsTYpeIoMPrcIC0zhIY8eJ_M8/exec';
 
 /* ══════════════════════════════════════════
    OPs LOCAL (del MPS Excel)
@@ -2076,7 +2076,8 @@ function enviarParadaGS(par){
   const maqNombre = par.maq ? (String(par.maq).toUpperCase().includes('REBOBINADORA') ? par.maq : 'REBOBINADORA # '+par.maq) : '';
   // Enviar via GET con callback JSONP — igual que getBOM/getBaseDatos, nunca falla
   const url = GS_SCRIPT
-    + '?tipo=PARADA'
+    + '?action=registrarParada'
+    + '&tipo=PARADA'
     + '&fecha='      + encodeURIComponent(par.fecha    ||'')
     + '&maquina='    + encodeURIComponent(maqNombre)
     + '&motivo='     + encodeURIComponent(par.motivo   ||'MANTENIMIENTO CORRECTIVO')
