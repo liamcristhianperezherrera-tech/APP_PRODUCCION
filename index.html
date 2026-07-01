@@ -582,8 +582,13 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
         </select>
       </div>
     </div>
-    <div class="fl" style="margin-bottom:10px"><label>Observación parada</label>
-      <input type="text" id="par-obs-reg" placeholder="Detalle adicional...">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="fl"><label>Observación parada</label>
+        <input type="text" id="par-obs-reg" placeholder="Detalle de la parada...">
+      </div>
+      <div class="fl"><label>Comentario registro (AN)</label>
+        <input type="text" id="f-obs" placeholder="Comentario del turno...">
+      </div>
     </div>
 
     <button class="btn btn-stop" onclick="parar()">⏹ REGISTRAR Y GUARDAR</button>
@@ -978,7 +983,7 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
    CONFIGURACIÓN — URLs Google Sheets
 ══════════════════════════════════════════ */
 const GS_MPS    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpDLt6JzXRk2YHhG2hZbMTr-l0_uNujIZK8h5sSO7mHyRU6VAn0C3wMJV1TC3mSemg61TJ4g3f4-ta/pub?gid=449365246&single=true&output=csv';
-const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbyODs-aAPSpzrj61YUQDN-4UtxbWVpoH9l9Gvw7LXLFezuEkA4CnhBKF2kwot_V473-/exec';
+const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbyWeO0Nn-89Ap3CsINF3seX_Mt6ybvPSrrtOMPr6lDgpaIsYuB9jMr2KI8Lak8seeQY/exec';
 
 /* ══════════════════════════════════════════
    OPs LOCAL (del MPS Excel)
