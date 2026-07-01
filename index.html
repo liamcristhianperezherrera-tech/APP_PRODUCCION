@@ -895,7 +895,7 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
    CONFIGURACIÓN — URLs Google Sheets
 ══════════════════════════════════════════ */
 const GS_MPS    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpDLt6JzXRk2YHhG2hZbMTr-l0_uNujIZK8h5sSO7mHyRU6VAn0C3wMJV1TC3mSemg61TJ4g3f4-ta/pub?gid=449365246&single=true&output=csv';
-const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbzJNjAS3xt6MZMOOfvRjwdbrcmnE8kdmkFS4JjNKouiEXULkHHMuF8wIJwF64VbbIWe/exec';
+const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbz1DNgzN8LojlLKJuBCeKNs7PDSqf00pvibaQ7JvAnoZ_i6b2BQWtpd5jGGf98Yvmic/exec';
 
 /* ══════════════════════════════════════════
    OPs LOCAL (del MPS Excel)
@@ -2088,7 +2088,9 @@ function enviarParadaGS(par){
     + '&observacion=' + encodeURIComponent(par.obs     ||'')
     + '&callback=_pCB';
   window._pCB = function(r){ 
-    if(r&&r.success) toast('☁ Parada en Sheet','ok'); 
+    console.log('PARADA RESPONSE:', JSON.stringify(r));
+    if(r&&r.success) toast('☁ Parada fila '+r.row+' guardada','ok');
+    else toast('ERROR: '+(r&&r.error?r.error:'sin respuesta'),'err');
     delete window._pCB; 
   };
   var s=document.createElement('script');
