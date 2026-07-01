@@ -895,7 +895,7 @@ tbody td{padding:7px 8px;white-space:nowrap;color:#111;}
    CONFIGURACIÓN — URLs Google Sheets
 ══════════════════════════════════════════ */
 const GS_MPS    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSpDLt6JzXRk2YHhG2hZbMTr-l0_uNujIZK8h5sSO7mHyRU6VAn0C3wMJV1TC3mSemg61TJ4g3f4-ta/pub?gid=449365246&single=true&output=csv';
-const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbxQb7ftsErP7lkZje_k75BAB3XHjyzqYsoMl1YgvD-OVv-kFaoezoRqD3c9y3Igq-h1/exec';
+const GS_SCRIPT = 'https://script.google.com/macros/s/AKfycbxH5ub0uxReLyNDo90I7_wQh88lmIzP0HxBNsOhCeJfP77DqjizS1D8P4KTL-DPaJ64/exec';
 
 /* ══════════════════════════════════════════
    OPs LOCAL (del MPS Excel)
@@ -2076,41 +2076,19 @@ function guardarParada(){
 function enviarParadaGS(par){
   const totalHr = par.minutos ? (par.minutos/60).toFixed(2) : '0';
   const maqNombre = par.maq ? (String(par.maq).toUpperCase().includes('REBOBINADORA') ? par.maq : 'REBOBINADORA # '+par.maq) : '';
-  const url = GS_SCRIPT
-    + '?action=registrarParada'
-    + '&fecha='       + encodeURIComponent(par.fecha    ||'')
-    + '&maquina='     + encodeURIComponent(maqNombre)
-    + '&motivo='      + encodeURIComponent(par.motivo   ||'MANTENIMIENTO CORRECTIVO')
-    + '&tip=P.%20MECANICA'
-    + '&hrInicio='    + encodeURIComponent(par.hinicio  ||'')
-    + '&hrFin='       + encodeURIComponent(par.hfin     ||'')
-    + '&totalHr='     + encodeURIComponent(totalHr)
-    + '&observacion=' + encodeURIComponent(par.obs      ||'')
-    + '&callback=_cbParada' + Date.now();
-  const cbName = '_cbParada' + Date.now();
-  const url2 = GS_SCRIPT
-    + '?action=registrarParada'
-    + '&fecha='       + encodeURIComponent(par.fecha    ||'')
-    + '&maquina='     + encodeURIComponent(maqNombre)
-    + '&motivo='      + encodeURIComponent(par.motivo   ||'MANTENIMIENTO CORRECTIVO')
-    + '&tip=P.%20MECANICA'
-    + '&hrInicio='    + encodeURIComponent(par.hinicio  ||'')
-    + '&hrFin='       + encodeURIComponent(par.hfin     ||'')
-    + '&totalHr='     + encodeURIComponent(totalHr)
-    + '&observacion=' + encodeURIComponent(par.obs      ||'')
-    + '&callback='    + cbName;
-  window[cbName] = function(r){
-    if(r && r.success) toast('☁ Parada guardada en Sheet','ok');
-    else toast('⚠ Error Sheet parada','warn');
-    delete window[cbName];
-    const s = document.getElementById(cbName);
-    if(s) s.remove();
-  };
-  const s = document.createElement('script');
-  s.id = cbName;
-  s.src = url2;
-  s.onerror = ()=>{ toast('⚠ Sin conexión — parada local','warn'); delete window[cbName]; s.remove(); };
-  document.head.appendChild(s);
+  const fd = new FormData();
+  fd.append('tipo',       'PARADA');
+  fd.append('fecha',      par.fecha    ||'');
+  fd.append('maquina',    maqNombre);
+  fd.append('motivo',     par.motivo   ||'MANTENIMIENTO CORRECTIVO');
+  fd.append('tip',        'P. MECANICA');
+  fd.append('hrInicio',   par.hinicio  ||'');
+  fd.append('hrFin',      par.hfin     ||'');
+  fd.append('totalHr',    totalHr);
+  fd.append('observacion',par.obs      ||'');
+  fetch(GS_SCRIPT,{method:'POST',mode:'no-cors',body:fd})
+    .then(()=>toast('☁ Parada enviada','ok'))
+    .catch(()=>toast('⚠ Sin conexión','warn'));
 }
 
 function renderParadas(){
