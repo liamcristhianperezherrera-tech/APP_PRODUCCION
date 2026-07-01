@@ -2076,19 +2076,41 @@ function guardarParada(){
 function enviarParadaGS(par){
   const totalHr = par.minutos ? (par.minutos/60).toFixed(2) : '0';
   const maqNombre = par.maq ? (String(par.maq).toUpperCase().includes('REBOBINADORA') ? par.maq : 'REBOBINADORA # '+par.maq) : '';
-  const fd = new FormData();
-  fd.append('tipo',       'PARADA');
-  fd.append('fecha',      par.fecha   ||'');
-  fd.append('maquina',    maqNombre);
-  fd.append('motivo',     par.motivo  ||'MANTENIMIENTO CORRECTIVO');
-  fd.append('tip',        'P. MECANICA');
-  fd.append('hrInicio',   par.hinicio ||'');
-  fd.append('hrFin',      par.hfin    ||'');
-  fd.append('totalHr',    totalHr);
-  fd.append('observacion',par.obs     ||'');
-  fetch(GS_SCRIPT,{method:'POST',mode:'no-cors',body:fd})
-    .then(()=>toast('☁ Parada enviada al Sheet','ok'))
-    .catch(()=>toast('⚠ Sin conexión','warn'));
+  const url = GS_SCRIPT
+    + '?action=registrarParada'
+    + '&fecha='       + encodeURIComponent(par.fecha    ||'')
+    + '&maquina='     + encodeURIComponent(maqNombre)
+    + '&motivo='      + encodeURIComponent(par.motivo   ||'MANTENIMIENTO CORRECTIVO')
+    + '&tip=P.%20MECANICA'
+    + '&hrInicio='    + encodeURIComponent(par.hinicio  ||'')
+    + '&hrFin='       + encodeURIComponent(par.hfin     ||'')
+    + '&totalHr='     + encodeURIComponent(totalHr)
+    + '&observacion=' + encodeURIComponent(par.obs      ||'')
+    + '&callback=_cbParada' + Date.now();
+  const cbName = '_cbParada' + Date.now();
+  const url2 = GS_SCRIPT
+    + '?action=registrarParada'
+    + '&fecha='       + encodeURIComponent(par.fecha    ||'')
+    + '&maquina='     + encodeURIComponent(maqNombre)
+    + '&motivo='      + encodeURIComponent(par.motivo   ||'MANTENIMIENTO CORRECTIVO')
+    + '&tip=P.%20MECANICA'
+    + '&hrInicio='    + encodeURIComponent(par.hinicio  ||'')
+    + '&hrFin='       + encodeURIComponent(par.hfin     ||'')
+    + '&totalHr='     + encodeURIComponent(totalHr)
+    + '&observacion=' + encodeURIComponent(par.obs      ||'')
+    + '&callback='    + cbName;
+  window[cbName] = function(r){
+    if(r && r.success) toast('☁ Parada guardada en Sheet','ok');
+    else toast('⚠ Error Sheet parada','warn');
+    delete window[cbName];
+    const s = document.getElementById(cbName);
+    if(s) s.remove();
+  };
+  const s = document.createElement('script');
+  s.id = cbName;
+  s.src = url2;
+  s.onerror = ()=>{ toast('⚠ Sin conexión — parada local','warn'); delete window[cbName]; s.remove(); };
+  document.head.appendChild(s);
 }
 
 function renderParadas(){
